@@ -14,11 +14,14 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -316,6 +319,7 @@ public class MarketDataPanel extends JPanel {
 		final TCombo<WhatToShow> m_whatToShow = new TCombo<WhatToShow>( WhatToShow.values() );
 		final JCheckBox m_rthOnly = new JCheckBox();
 		final Semaphore downloadRequestMutex;
+		final ScheduledExecutorService mutexTimeoutMonitorExecutor = Executors.newScheduledThreadPool(5);
 		
 		HistRequestPanel(Semaphore downloadRequestMutex) {
 			this.downloadRequestMutex = downloadRequestMutex;
@@ -354,14 +358,14 @@ public class MarketDataPanel extends JPanel {
 	
 		protected void onHistorical() {
 			m_contractPanel.onOK();
-			BarResultsPanel panel = new BarResultsPanel(true, m_contract, m_end.getText(), m_duration.getInt(),
-					m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(), m_whatToShow.getSelectedItem(), downloadRequestMutex);
-			ApiDemo.INSTANCE.controller()
-					.reqHistoricalData(m_contract, m_end.getText(), m_duration.getInt(),
-							m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(),
-							m_whatToShow.getSelectedItem(), m_rthOnly.isSelected(), panel);
-			m_resultsPanel.addTab("Historical " + m_contract.symbol(), panel, true, true);
-//            downloadAllTickers();
+//			BarResultsPanel panel = new BarResultsPanel(true, m_contract, m_end.getText(), m_duration.getInt(),
+//					m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(), m_whatToShow.getSelectedItem(), downloadRequestMutex);
+//			ApiDemo.INSTANCE.controller()
+//					.reqHistoricalData(m_contract, m_end.getText(), m_duration.getInt(),
+//							m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(),
+//							m_whatToShow.getSelectedItem(), m_rthOnly.isSelected(), panel);
+//			m_resultsPanel.addTab("Historical " + m_contract.symbol(), panel, true, true);
+            downloadAllTickers();
 		}
 
 		private void downloadAllTickers() {
@@ -386,7 +390,9 @@ public class MarketDataPanel extends JPanel {
 
 				m_contract.symbol(ticker);
 
-				BarResultsPanel panel = new BarResultsPanel(true, m_contract, m_end.getText(), m_duration.getInt(), m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(), m_whatToShow.getSelectedItem(), downloadRequestMutex);
+				BarResultsPanel panel = new BarResultsPanel(true, m_contract, m_end.getText(), m_duration.getInt(),
+						m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(), m_whatToShow.getSelectedItem(),
+						downloadRequestMutex, mutexTimeoutMonitorExecutor);
 				ApiDemo.INSTANCE.controller()
 						.reqHistoricalData(m_contract, m_end.getText(), m_duration.getInt(),
 								m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(),
@@ -454,6 +460,7 @@ public class MarketDataPanel extends JPanel {
 		WhatToShow whatToShow;
 		String path;
 		Semaphore downloadRequestMutex;
+		ScheduledExecutorService mutexTimeoutMonitorExecutor;
 
 		/**
 		 * Stores all params used to make a historical data request so it saves them in a csv dump
@@ -465,7 +472,7 @@ public class MarketDataPanel extends JPanel {
 		 * @param barSize
 		 * @param whatToShow
 		 */
-		BarResultsPanel(boolean historical, Contract contract, String endDate, int duration, DurationUnit durationUnit, BarSize barSize, WhatToShow whatToShow, Semaphore mutex) {
+		BarResultsPanel(boolean historical, Contract contract, String endDate, int duration, DurationUnit durationUnit, BarSize barSize, WhatToShow whatToShow, Semaphore mutex, ScheduledExecutorService mutexTimeoutMonitorExecutor) {
 			this(historical);
 			this.contract = contract;
 			this.endDate = endDate;
@@ -474,14 +481,23 @@ public class MarketDataPanel extends JPanel {
 			this.barSize = barSize;
 			this.whatToShow = whatToShow;
 			this.downloadRequestMutex = mutex;
+			this.mutexTimeoutMonitorExecutor = mutexTimeoutMonitorExecutor;
 
-			this.path = String.format("/Users/jimmy/price-data/sp500-30min/%s-%s-%s%s-%s.csv",
+			this.path = String.format("/Users/jimmy/price-data/sp500-30min/2007-2012/%s-%s-%s%s-%s.csv",
 					contract.symbol(), endDate, duration, durationUnit, barSize.toString());
 			try {
 				this.outputFileWriter = new FileWriter(new File(path));
 			} catch (IOException e) {
 			    System.out.println("could not open file at: " + path + " for saving data. Due to: " + e.getMessage());
 			}
+			// Since we don't seem to catch exceptions from the API correctly
+			// install a background thread to implement a timeout so that we release the mutex after X mins in case the
+			// Symbol was bad or otherwise unavailable
+			int timeout = 3;
+			mutexTimeoutMonitorExecutor.schedule(() -> {
+				System.out.println("NOTE: " + this.path + " timed out after " + timeout + " mins, releasing lock.");
+				mutex.release();
+			}, timeout, TimeUnit.MINUTES);
 		}
 		
 		BarResultsPanel( boolean historical) {
