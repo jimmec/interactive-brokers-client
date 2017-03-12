@@ -10,6 +10,8 @@ import java.awt.GridLayout;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -370,9 +373,12 @@ public class MarketDataPanel extends JPanel {
 
 		private void downloadAllTickers() {
 			List<Long> previousDownloadTimeSeconds = new ArrayList<>(505);
-			String[] tickers = new String[] {"MMM","ABT","ABBV","ACN","ATVI","AYI","ADBE","AAP","AES","AET","AMG","AFL","A","APD","AKAM","ALK","ALB","AGN","LNT","ALXN","ALLE","ADS","ALL","GOOGL","GOOG","MO","AMZN","AEE","AAL","AEP","AXP","AIG","AMT","AWK","AMP","ABC","AME","AMGN","APH","APC","ADI","ANTM","AON","APA","AIV","AAPL","AMAT","ADM","ARNC","AJG","AIZ","T","ADSK","ADP","AN","AZO","AVB","AVY","BHI","BLL","BAC","BK","BCR","BAX","BBT","BDX","BBBY","BRK B","BBY","BIIB","BLK","HRB","BA","BWA","BXP","BSX","BMY","AVGO","BF B","CHRW","CA","COG","CPB","COF","CAH","HSIC","KMX","CCL","CAT","CBG","CBS","CELG","CNC","CNP","CTL","CERN","CF","SCHW","CHTR","CHK","CVX","CMG","CB","CHD","CI","XEC","CINF","CTAS","CSCO","C","CFG","CTXS","CLX","CME","CMS","COH","KO","CTSH","CL","CMCSA","CMA","CAG","CXO","COP","ED","STZ","GLW","COST","COTY","CCI","CSRA","CSX","CMI","CVS","DHI","DHR","DRI","DVA","DE","DLPH","DAL","XRAY","DVN","DLR","DFS","DISCA","DISCK","DG","DLTR","D","DOV","DOW","DPS","DTE","DD","DUK","DNB","ETFC","EMN","ETN","EBAY","ECL","EIX","EW","EA","EMR","ENDP","ETR","EVHC","EOG","EQT","EFX","EQIX","EQR","ESS","EL","ES","EXC","EXPE","EXPD","ESRX","EXR","XOM","FFIV","FB","FAST","FRT","FDX","FIS","FITB","FSLR","FE","FISV","FLIR","FLS","FLR","FMC","FTI","FL","F","FTV","FBHS","BEN","FCX","FTR","GPS","GRMN","GD","GE","GGP","GIS","GM","GPC","GILD","GPN","GS","GT","GWW","HAL","HBI","HOG","HAR","HRS","HIG","HAS","HCA","HCP","HP","HES","HPE","HOLX","HD","HON","HRL","HST","HPQ","HUM","HBAN","IDXX","ITW","ILMN","IR","INTC","ICE","IBM","IP","IPG","IFF","INTU","ISRG","IVZ","IRM","JEC","JBHT","SJM","JNJ","JCI","JPM","JNPR","KSU","K","KEY","KMB","KIM","KMI","KLAC","KSS","KHC","KR","LB","LLL","LH","LRCX","LEG","LEN","LVLT","LUK","LLY","LNC","LLTC","LKQ","LMT","L","LOW","LYB","MTB","MAC","M","MNK","MRO","MPC","MAR","MMC","MLM","MAS","MA","MAT","MKC","MCD","MCK","MJN","MDT","MRK","MET","MTD","KORS","MCHP","MU","MSFT","MAA","MHK","TAP","MDLZ","MON","MNST","MCO","MS","MOS","MSI","MUR","MYL","NDAQ","NOV","NAVI","NTAP","NFLX","NWL","NFX","NEM","NWSA","NWS","NEE","NLSN","NKE","NI","NBL","JWN","NSC","NTRS","NOC","NRG","NUE","NVDA","ORLY","OXY","OMC","OKE","ORCL","PCAR","PH","PDCO","PAYX","PYPL","PNR","PBCT","PEP","PKI","PRGO","PFE","PCG","PM","PSX","PNW","PXD","PBI","PNC","RL","PPG","PPL","PX","PCLN","PFG","PG","PGR","PLD","PRU","PEG","PSA","PHM","PVH","QRVO","PWR","QCOM","DGX","RRC","RTN","O","RHT","REGN","RF","RSG","RAI","RHI","ROK","COL","ROP","ROST","RCL","R","CRM","SCG","SLB","SNI","STX","SEE","SRE","SHW","SIG","SPG","SWKS","SLG","SNA","SO","LUV","SWN","SE","SPGI","SWK","SPLS","SBUX","STT","SRCL","SYK","STI","SYMC","SYF","SYY","TROW","TGT","TEL","TGNA","TDC","TSO","TXN","TXT","COO","HSY","TRV","TMO","TIF","TWX","TJX","TMK","TSS","TSCO","TDG","RIG","TRIP","FOXA","FOX","TSN","UDR","ULTA","USB","UA","UAA","UNP","UAL","UNH","UPS","URI","UTX","UHS","UNM","URBN","VFC","VLO","VAR","VTR","VRSN","VRSK","VZ","VRTX","VIAB","V","VNO","VMC","WMT","WBA","DIS","WM","WAT","WEC","WFC","HCN","WDC","WU","WRK","WY","WHR","WFM","WMB","WLTW","WYN","WYNN","XEL","XRX","XLNX","XL","XYL","YHOO","YUM","ZBH","ZION","ZTS"}; int waitSeconds = 35;
+			// SP500 in 2017
+//			String[] tickers = new String[] {"MMM","ABT","ABBV","ACN","ATVI","AYI","ADBE","AAP","AES","AET","AMG","AFL","A","APD","AKAM","ALK","ALB","AGN","LNT","ALXN","ALLE","ADS","ALL","GOOGL","GOOG","MO","AMZN","AEE","AAL","AEP","AXP","AIG","AMT","AWK","AMP","ABC","AME","AMGN","APH","APC","ADI","ANTM","AON","APA","AIV","AAPL","AMAT","ADM","ARNC","AJG","AIZ","T","ADSK","ADP","AN","AZO","AVB","AVY","BHI","BLL","BAC","BK","BCR","BAX","BBT","BDX","BBBY","BRK B","BBY","BIIB","BLK","HRB","BA","BWA","BXP","BSX","BMY","AVGO","BF B","CHRW","CA","COG","CPB","COF","CAH","HSIC","KMX","CCL","CAT","CBG","CBS","CELG","CNC","CNP","CTL","CERN","CF","SCHW","CHTR","CHK","CVX","CMG","CB","CHD","CI","XEC","CINF","CTAS","CSCO","C","CFG","CTXS","CLX","CME","CMS","COH","KO","CTSH","CL","CMCSA","CMA","CAG","CXO","COP","ED","STZ","GLW","COST","COTY","CCI","CSRA","CSX","CMI","CVS","DHI","DHR","DRI","DVA","DE","DLPH","DAL","XRAY","DVN","DLR","DFS","DISCA","DISCK","DG","DLTR","D","DOV","DOW","DPS","DTE","DD","DUK","DNB","ETFC","EMN","ETN","EBAY","ECL","EIX","EW","EA","EMR","ENDP","ETR","EVHC","EOG","EQT","EFX","EQIX","EQR","ESS","EL","ES","EXC","EXPE","EXPD","ESRX","EXR","XOM","FFIV","FB","FAST","FRT","FDX","FIS","FITB","FSLR","FE","FISV","FLIR","FLS","FLR","FMC","FTI","FL","F","FTV","FBHS","BEN","FCX","FTR","GPS","GRMN","GD","GE","GGP","GIS","GM","GPC","GILD","GPN","GS","GT","GWW","HAL","HBI","HOG","HAR","HRS","HIG","HAS","HCA","HCP","HP","HES","HPE","HOLX","HD","HON","HRL","HST","HPQ","HUM","HBAN","IDXX","ITW","ILMN","IR","INTC","ICE","IBM","IP","IPG","IFF","INTU","ISRG","IVZ","IRM","JEC","JBHT","SJM","JNJ","JCI","JPM","JNPR","KSU","K","KEY","KMB","KIM","KMI","KLAC","KSS","KHC","KR","LB","LLL","LH","LRCX","LEG","LEN","LVLT","LUK","LLY","LNC","LLTC","LKQ","LMT","L","LOW","LYB","MTB","MAC","M","MNK","MRO","MPC","MAR","MMC","MLM","MAS","MA","MAT","MKC","MCD","MCK","MJN","MDT","MRK","MET","MTD","KORS","MCHP","MU","MSFT","MAA","MHK","TAP","MDLZ","MON","MNST","MCO","MS","MOS","MSI","MUR","MYL","NDAQ","NOV","NAVI","NTAP","NFLX","NWL","NFX","NEM","NWSA","NWS","NEE","NLSN","NKE","NI","NBL","JWN","NSC","NTRS","NOC","NRG","NUE","NVDA","ORLY","OXY","OMC","OKE","ORCL","PCAR","PH","PDCO","PAYX","PYPL","PNR","PBCT","PEP","PKI","PRGO","PFE","PCG","PM","PSX","PNW","PXD","PBI","PNC","RL","PPG","PPL","PX","PCLN","PFG","PG","PGR","PLD","PRU","PEG","PSA","PHM","PVH","QRVO","PWR","QCOM","DGX","RRC","RTN","O","RHT","REGN","RF","RSG","RAI","RHI","ROK","COL","ROP","ROST","RCL","R","CRM","SCG","SLB","SNI","STX","SEE","SRE","SHW","SIG","SPG","SWKS","SLG","SNA","SO","LUV","SWN","SE","SPGI","SWK","SPLS","SBUX","STT","SRCL","SYK","STI","SYMC","SYF","SYY","TROW","TGT","TEL","TGNA","TDC","TSO","TXN","TXT","COO","HSY","TRV","TMO","TIF","TWX","TJX","TMK","TSS","TSCO","TDG","RIG","TRIP","FOXA","FOX","TSN","UDR","ULTA","USB","UA","UAA","UNP","UAL","UNH","UPS","URI","UTX","UHS","UNM","URBN","VFC","VLO","VAR","VTR","VRSN","VRSK","VZ","VRTX","VIAB","V","VNO","VMC","WMT","WBA","DIS","WM","WAT","WEC","WFC","HCN","WDC","WU","WRK","WY","WHR","WFM","WMB","WLTW","WYN","WYNN","XEL","XRX","XLNX","XL","XYL","YHOO","YUM","ZBH","ZION","ZTS"}; int waitSeconds = 35;
+			// SP500 in 2012
+			String[] tickers = new String[] {"MMM","ACE","ABT","ANF","ACN","ADBE","AMD","AES","AET","AFL","A","GAS","APD","ARG","AKAM","AA","ATI","AGN","ALL","ALTR","MO","AMZN","AEE","AEP","AXP","AIG","AMT","AMP","ABC","AMGN","APH","APC","ADI","AON","APA","AIV","APOL","AAPL","AMAT","ADM","AIZ","T","ADSK","ADP","AN","AZO","AVB","AVY","AVP","BHI","BLL","BAC","BK","BCR","BAX","BBT","BEAM","BDX","BBBY","BMS","BRK.B","BBY","BIG","BIIB","BLK","HRB","BMC","BA","BWA","BXP","BSX","BMY","BRCM","BFB","CHRW","CA","CVC","COG","CAM","CPB","COF","CAH","CFN","KMX","CCL","CAT","CBG","CBS","CELG","CNP","CTL","CERN","CF","SCHW","CHK","CVX","CB","CI","CINF","CTAS","CSCO","C","CTXS","CLF","CLX","CME","CMS","COH","KO","CCE","CTSH","CL","CMCSA","CMA","CSC","CAG","COP","CNX","ED","STZ","CEG","GLW","COST","CVH","COV","CSX","CMI","CVS","DHI","DHR","DRI","DVA","DF","DE","DELL","DNR","XRAY","DVN","DV","DO","DTV","DFS","DISCA","DLTR","D","RRD","DOV","DOW","DPS","DTE","DD","DUK","DNB","ETFC","EMN","ETN","EBAY","ECL","EIX","EW","EP","EA","EMC","EMR","ETR","EOG","EQT","EFX","EQR","EL","EXC","EXPE","EXPD","ESRX","XOM","FFIV","FDO","FAST","FII","FDX","FIS","FITB","FHN","FSLR","FE","FISV","FLIR","FLS","FLR","FMC","FTI","F","FRX","BEN","FCX","FTR","GME","GCI","GPS","GD","GE","GIS","GPC","GNW","GILD","GS","GR","GT","GOOG","GWW","HAL","HOG","HAR","HRS","HIG","HAS","HCP","HCN","HNZ","HP","HES","HPQ","HD","HON","HRL","HSP","HST","HCBK","HUM","HBAN","ITW","TEG","INTC","ICE","IBM","IFF","IGT","IP","IPG","INTU","ISRG","IVZ","IRM","XYL","JBL","JEC","CBE","JDSU","JNJ","JCI","JOY","JPM","JNPR","K","KEY","KMB","KIM","KLAC","KSS","KFT","KR","LLL","LH","LM","LEG","LEN","LUK","LXK","LIFE","LLY","LTD","LNC","LLTC","LMT","L","LO","LOW","LSI","MTB","M","MRO","MPC","MAR","MMC","MAS","ANR","MA","MAT","MKC","MCD","MHP","MCK","MJN","MWV","MHS","MDT","MRK","MET","PCS","MCHP","MU","MSFT","MOLX","TAP","MON","MCO","MS","MOS","MMI","MSI","MUR","MYL","NBR","NDAQ","NOV","NTAP","NFLX","NWL","NFX","NEM","NWSA","NEE","NKE","NI","NE","NBL","JWN","NSC","NTRS","NOC","NU","CMG","NVLS","NRG","NUE","NVDA","NYX","ORLY","OXY","OMC","OKE","ORCL","OI","PCAR","IR","PLL","PH","PDCO","PAYX","BTU","JCP","PBCT","POM","PEP","PKI","PRGO","PFE","PCG","PM","PNW","PXD","PBI","PCL","PNC","RL","PPG","PPL","PX","PCP","PCLN","PFG","PG","PGN","PGR","PLD","PRU","PEG","PSA","PHM","QEP","PWR","QCOM","DGX","RRC","RTN","RHT","RF","RSG","RAI","RHI","ROK","COL","ROP","ROST","RDC","R","SWY","SAI","CRM","SNDK","SLE","SCG","SLB","SNI","SEE","SHLD","SRE","SHW","SIAL","SPG","SLM","SJM","SNA","SO","LUV","SWN","SE","S","STJ","SWK","SPLS","SBUX","HOT","STT","SRCL","SYK","SUN","STI","SVU","SYMC","SYY","TROW","TGT","TEL","TE","THC","TDC","TER","TSO","TXN","TXT","HSY","TRV","TMO","TIF","TWX","TWC","TIE","TJX","TMK","TSS","TRIP","TSN","TYC","USB","UNP","UNH","UPS","X","UTX","UNM","URBN","VFC","VLO","VAR","VTR","VRSN","VZ","VIAB","V","VNO","VMC","WMT","WAG","DIS","WPO","WM","WAT","WPI","WLP","WFC","WDC","WU","WY","WHR","WFM","WMB","WIN","WEC","WPX","WYN","WYNN","XEL","XRX","XLNX","XL","YHOO","YUM","ZMH","ZION"};
 			Arrays.sort(tickers);
-			for (int i = 0; i < tickers.length; ++i) {
+			for (int i = 2; i < tickers.length; ++i) {
 				Instant starttime = Instant.now();
 				try {
 					downloadRequestMutex.acquire();
@@ -390,6 +396,14 @@ public class MarketDataPanel extends JPanel {
 
 				m_contract.symbol(ticker);
 
+				String path = String.format("/Users/jimmy/price-data/sp500-30min/2007-2012/%s-%s-%s%s-%s.csv",
+						ticker, m_end.getText(), m_duration.getInt(), m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem().toString());
+				if (Files.isRegularFile(Paths.get(path))) {
+					System.out.println(path + " already exists. Skipping.");
+					downloadRequestMutex.release();
+					continue;
+				}
+
 				BarResultsPanel panel = new BarResultsPanel(true, m_contract, m_end.getText(), m_duration.getInt(),
 						m_durationUnit.getSelectedItem(), m_barSize.getSelectedItem(), m_whatToShow.getSelectedItem(),
 						downloadRequestMutex, mutexTimeoutMonitorExecutor);
@@ -401,7 +415,7 @@ public class MarketDataPanel extends JPanel {
 
 				String waitMsg = Instant.now().toString() + " - Waiting until all data received...";
 				System.out.println(waitMsg);
-				if (i==0) previousDownloadTimeSeconds.clear(); // delete first round times
+				if (i==2) previousDownloadTimeSeconds.clear(); // delete first round times
 				System.out.println("Timing data so far: " + previousDownloadTimeSeconds.stream().mapToLong(Long::new).summaryStatistics().toString());
 				System.out.println(previousDownloadTimeSeconds);
 			}
@@ -461,6 +475,7 @@ public class MarketDataPanel extends JPanel {
 		String path;
 		Semaphore downloadRequestMutex;
 		ScheduledExecutorService mutexTimeoutMonitorExecutor;
+		ScheduledFuture<?> timeoutMonitor;
 
 		/**
 		 * Stores all params used to make a historical data request so it saves them in a csv dump
@@ -493,9 +508,10 @@ public class MarketDataPanel extends JPanel {
 			// Since we don't seem to catch exceptions from the API correctly
 			// install a background thread to implement a timeout so that we release the mutex after X mins in case the
 			// Symbol was bad or otherwise unavailable
-			int timeout = 3;
-			mutexTimeoutMonitorExecutor.schedule(() -> {
-				System.out.println("NOTE: " + this.path + " timed out after " + timeout + " mins, releasing lock.");
+			int timeout = 5;
+			this.timeoutMonitor = mutexTimeoutMonitorExecutor.schedule(() -> {
+				System.out.println(Instant.now() + " NOTE: " + this.path + " timed out after " + timeout + " mins, releasing lock.");
+				ApiDemo.INSTANCE.controller().cancelHistoricalData( this);
 				mutex.release();
 			}, timeout, TimeUnit.MINUTES);
 		}
@@ -562,6 +578,7 @@ public class MarketDataPanel extends JPanel {
 				e.printStackTrace();
 			}
 			m_rows.clear(); // clear memory after its all written to disk;
+			timeoutMonitor.cancel(true);
 			downloadRequestMutex.release();
 			System.out.println(Instant.now().toString() + " - Written and released Mutex");
 			System.out.println("============================");
